@@ -24,64 +24,74 @@ def multiply_op(code: List[int], input1: int, input2: int, output: int) -> List[
     return new_code
 
 
-opcodes = {
+instructions = {
     1: add_op,
     2: multiply_op,
     99: None,
 }
 
 
-def run_program(original_code: List[int]) -> List[int]:
+def run_program(initial_memory: List[int], input1: int, input2: int) -> int:
 
-    code = original_code.copy()
+    memory = initial_memory.copy()
 
-    current_position = 0
-    operation = opcodes[
-        code[current_position]
+    memory[1] = input1
+    memory[2] = input2
+
+    instruction_pointer = 0
+    instruction = instructions[
+        memory[instruction_pointer]
     ]
 
-    while operation is not None:
-        input1_position = code[current_position + 1]
-        input2_position = code[current_position + 2]
-        output_position = code[current_position + 3]
+    while instruction is not None:
+        parameter1_address = memory[instruction_pointer + 1]
+        parameter2_address = memory[instruction_pointer + 2]
+        output_address = memory[instruction_pointer + 3]
 
-        code = operation(code, input1_position, input2_position, output_position)
+        memory = instruction(memory, parameter1_address, parameter2_address, output_address)
 
-        current_position += 4
-        operation = opcodes[
-            code[current_position]
+        instruction_pointer += 4
+        instruction = instructions[
+            memory[instruction_pointer]
         ]
     
-    return code
+    return memory
 
 
 if __name__ == '__main__':
 
     test_program = [1,0,0,0,99]
-    test_output = run_program(test_program)
+    test_output = run_program(test_program, 0, 0)
     assert all(truth == test for truth, test in zip(test_output, [2,0,0,0,99]))
 
     test_program = [2,3,0,3,99]
-    test_output = run_program(test_program)
+    test_output = run_program(test_program, 3, 0)
     assert all(truth == test for truth, test in zip(test_output, [2,3,0,6,99]))
 
     test_program = [2,4,4,5,99,0]
-    test_output = run_program(test_program)
+    test_output = run_program(test_program, 4, 4)
     assert all(truth == test for truth, test in zip(test_output, [2,4,4,5,99,9801]))
 
     test_program = [1,1,1,4,99,5,6,0,99]
-    test_output = run_program(test_program)
+    test_output = run_program(test_program, 1, 1)
     assert all(truth == test for truth, test in zip(test_output, [30,1,1,4,2,5,6,0,99]))
 
     print('All Tests Passed!')
 
-    code = read_program('./inputs/day02.txt')
-
-    modified_code = code.copy()
-    modified_code[1] = 12
-    modified_code[2] = 2
+    program_memory = read_program('./inputs/day02.txt')
     
-    output1 = run_program(modified_code)
+    output1 = run_program(program_memory, 12, 2)
 
     print(f"First answer: {output1[0]}")
-    
+
+    found_it = False
+    for noun in range(0, 99):
+        for verb in range(0, 99):
+            test_output = run_program(program_memory, noun, verb)
+
+            if test_output[0] == 19690720:
+                print(f'Found it! Second answer: 100 * {noun} + {verb} = {100 * noun + verb}')
+                found_it = True
+                break
+        if found_it:
+            break
