@@ -73,6 +73,7 @@ def render_image(decoded_image: List[List[List[int]]]) -> List[List[int]]:
     
     return rendered_image
 
+
 def print_image(rendered_image: List[List[int]]):
 
     for row in rendered_image:

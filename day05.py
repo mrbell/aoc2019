@@ -1,5 +1,5 @@
 
-from typing import List, Tuple, Callable, Dict
+from typing import List, Tuple, Callable, Dict, Union
 
 
 def read_program(filename: str) -> List[int]:
@@ -9,14 +9,26 @@ def read_program(filename: str) -> List[int]:
 
 
 class Parameter(object):
-    def __init__(self, value: int, mode: int):
+    def __init__(self, value: int, mode: int) -> None:
         self.value = value
         self.mode = mode
-    def get(self, memory: List[int]):
-        if self.mode:
+    def get(self, memory: List[int], relative_base: int) -> int:
+        if self.mode == 1:
             return self.value
+        elif self.mode == 2:
+            try:
+                value = memory[self.value + relative_base]
+            except IndexError:
+                memory.extend([0 for _ in range(self.value + relative_base - len(memory) + 1)])
+                value = 0
+            return value
         else:
-            return memory[self.value]
+            try:
+                value = memory[self.value]
+            except IndexError:
+                memory.extend([0 for _ in range(self.value - len(memory) + 1)])
+                value = 0
+            return value
 
 
 class IntcodeComputer(object):
@@ -26,6 +38,7 @@ class IntcodeComputer(object):
         self.memory = initial_memory.copy()
 
         self.instruction_pointer = 0
+        self.relative_base = 0
 
         # Tuples are  
         #    the op function, whether it takes input, gives output, 
@@ -39,6 +52,7 @@ class IntcodeComputer(object):
             6: (self.jump_if_false_op, False, False, 2),
             7: (self.less_than_op, False, False, 3),
             8: (self.equal_to_op, False, False, 3),
+            9: (self.relative_base_offset_op, False, False, 1),
             99: (None, False, False, 0),
         }
 
@@ -73,18 +87,41 @@ class IntcodeComputer(object):
         return op_function, takes_input, sends_output, params
 
     def add_op(self, parameter1: Parameter, parameter2: Parameter, parameter3: Parameter) -> None:
-        self.memory[parameter3.value] = parameter1.get(self.memory) + parameter2.get(self.memory)
+        if parameter3.mode == 2:
+            value = parameter3.value + self.relative_base
+        else: 
+            value = parameter3.value
+
+        if value >= len(self.memory):
+            self.memory.extend([0 for _ in range(value - len(self.memory) + 1)])
+
+        self.memory[value] = parameter1.get(self.memory, self.relative_base) + parameter2.get(self.memory, self.relative_base)
         self.instruction_pointer += 4
         return None
 
     def multiply_op(self, parameter1: Parameter, parameter2: Parameter, parameter3: Parameter) -> None:
-        self.memory[parameter3.value] = parameter1.get(self.memory) * parameter2.get(self.memory)
+        if parameter3.mode == 2:
+            value = parameter3.value + self.relative_base
+        else: 
+            value = parameter3.value
+
+        if value >= len(self.memory):
+            self.memory.extend([0 for _ in range(value - len(self.memory) + 1)])
+
+        self.memory[value] = parameter1.get(self.memory, self.relative_base) * parameter2.get(self.memory, self.relative_base)
         self.instruction_pointer += 4
         return None
 
     def set_op(self, input_value: int, parameter1: Parameter) -> None:
+        if parameter1.mode == 2:
+            value = parameter1.value + self.relative_base
+        else: 
+            value = parameter1.value
 
-        self.memory[parameter1.value] = input_value
+        if value >= len(self.memory):
+            self.memory.extend([0 for _ in range(value - len(self.memory) + 1)])
+
+        self.memory[value] = input_value
         self.instruction_pointer += 2
 
         return None
@@ -92,35 +129,55 @@ class IntcodeComputer(object):
     def get_op(self, parameter1: Parameter) -> int:
         self.instruction_pointer += 2
 
-        return parameter1.get(self.memory)
+        return parameter1.get(self.memory, self.relative_base)
 
     def jump_if_true_op(self, parameter1: Parameter, parameter2: Parameter) -> None:
-        if parameter1.get(self.memory) != 0:
-            self.instruction_pointer = parameter2.get(self.memory)
+        if parameter1.get(self.memory, self.relative_base) != 0:
+            self.instruction_pointer = parameter2.get(self.memory, self.relative_base)
         else:
             self.instruction_pointer += 3
         return None
 
     def jump_if_false_op(self, parameter1: Parameter, parameter2: Parameter) -> None:
-        if parameter1.get(self.memory) == 0:
-            self.instruction_pointer = parameter2.get(self.memory)
+        if parameter1.get(self.memory, self.relative_base) == 0:
+            self.instruction_pointer = parameter2.get(self.memory, self.relative_base)
         else:
             self.instruction_pointer += 3
         return None
 
     def less_than_op(self, parameter1: Parameter, parameter2: Parameter, parameter3: Parameter) -> None:
-        if parameter1.get(self.memory) < parameter2.get(self.memory):
-            self.memory[parameter3.value] = 1
+        if parameter3.mode == 2:
+            value = parameter3.value + self.relative_base
+        else: 
+            value = parameter3.value
+
+        if value >= len(self.memory):
+            self.memory.extend([0 for _ in range(value - len(self.memory) + 1)])
+
+        if parameter1.get(self.memory, self.relative_base) < parameter2.get(self.memory, self.relative_base):
+            self.memory[value] = 1
         else:
-            self.memory[parameter3.value] = 0
+            self.memory[value] = 0
         self.instruction_pointer += 4
 
-    def equal_to_op(self, parameter1: Parameter, parameter2: Parameter, parameter3: Parameter) -> None:
-        if parameter1.get(self.memory) == parameter2.get(self.memory):
-            self.memory[parameter3.value] = 1
+    def equal_to_op(self, parameter1: Parameter, parameter2: Parameter, parameter3: Parameter) -> None: 
+        if parameter3.mode == 2:
+            value = parameter3.value + self.relative_base
+        else: 
+            value = parameter3.value
+
+        if value >= len(self.memory):
+            self.memory.extend([0 for _ in range(value - len(self.memory) + 1)])
+
+        if parameter1.get(self.memory, self.relative_base) == parameter2.get(self.memory, self.relative_base):
+                self.memory[value] = 1
         else:
-            self.memory[parameter3.value] = 0
+            self.memory[value] = 0
         self.instruction_pointer += 4
+
+    def relative_base_offset_op(self, parameter1: Parameter) -> None:
+        self.relative_base += parameter1.get(self.memory, self.relative_base)
+        self.instruction_pointer += 2
 
     def run(self, *inputs: Tuple[int]) -> List[int]:
         """
