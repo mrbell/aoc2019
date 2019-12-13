@@ -40,3 +40,9 @@ if __name__ == "__main__":
     assert len(output) == 1
 
     print(f"BOOST keycode: {output[0]}")
+
+    computer = IntcodeComputer(program)
+    output = computer.run(2)
+    assert len(output) == 1
+
+    print(f"Distress coordinates: {output[0]}")
