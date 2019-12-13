@@ -123,6 +123,9 @@ class IntcodeComputer(object):
         self.instruction_pointer += 4
 
     def run(self, *inputs: Tuple[int]) -> List[int]:
+        """
+        Run the program until opcode 99 is reached. Return all outputs produced as a list of integers.
+        """
 
         self.memory = self.initial_memory.copy()
 
@@ -147,6 +150,35 @@ class IntcodeComputer(object):
             op_function, takes_input, gives_output, parameters = self.parse_instruction()
 
         return outputs
+
+    def run_and_halt(self, *inputs: Tuple[int]) -> int:
+        """
+        Run the program until it produces output at which time it will return the output and halt execution.
+        Program state and instruction pointer is maintained between calls. When opcode 99 is reached (program is terminated)
+        this method will return None.
+        """
+
+        inputs = list(inputs)
+        inputs.reverse()
+
+        op_function, takes_input, gives_output, parameters = self.parse_instruction()
+
+        while op_function is not None:
+
+            if takes_input and not gives_output:
+                op_function(inputs.pop(), *parameters)
+            elif not takes_input and gives_output:
+                return op_function(*parameters)
+            elif takes_input and gives_output:
+                return op_function(inputs.pop(), *parameters)
+            else:
+                op_function(*parameters)
+
+            op_function, takes_input, gives_output, parameters = self.parse_instruction()
+
+        return None
+
+
 
 
 if __name__ == '__main__':
