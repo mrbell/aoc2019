@@ -45,7 +45,9 @@ def get_best_location(asteroid_locations: List[Tuple[int, int]]) -> Tuple[Tuple[
     return max_loc, max_n
 
 
-def get_vaporization_order(central_asteroid: Tuple[int, int], asteroid_locations: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+def get_vaporization_order(
+    central_asteroid: Tuple[int, int], asteroid_locations: List[Tuple[int, int]]
+) -> List[Tuple[int, int]]:
 
     angle_distances = []
 
@@ -57,15 +59,20 @@ def get_vaporization_order(central_asteroid: Tuple[int, int], asteroid_locations
         dy = asteroid_location[0] - central_asteroid[0]
         dx = -asteroid_location[1] + central_asteroid[1]  
 
-        angle_distances.append((asteroid_location, (atan2(dy, dx) + pi * 2) % (pi * 2), sqrt(dx ** 2 + dy ** 2)))
+        angle_distances.append((
+            asteroid_location, 
+            (atan2(dy, dx) + pi * 2) % (pi * 2),  # To convert to the range [0, 2pi] rather than [-pi, pi]
+            sqrt(dx ** 2 + dy ** 2)
+        ))
 
+    # Sort by angle then distance 
     angle_distances = sorted(angle_distances, key=lambda x: (x[1], x[2]))
 
     adjusted_angle_distances = [angle_distances[0]]
     for angle_dist, next_angle_dist in zip(angle_distances[:-1], angle_distances[1:]):
         if next_angle_dist[1] == angle_dist[1]:  
-            # At the same angle as another, but the next one must be behind another so 
-            # we have to sweep around before blasting it
+            # At the same angle as another. The next one must be behind another so 
+            # we have to sweep around before blasting it, so add 2pi to angle
             adjusted_angle_distances.append(
                 (
                     next_angle_dist[0], 
@@ -165,16 +172,6 @@ if __name__ == '__main__':
     vaporization_order = get_vaporization_order((11, 13), asteroid_locations)
     assert vaporization_order[199][0][0] == 8
     assert vaporization_order[199][0][1] == 2
-
-
-#     test_map = '''.#....#####...#..
-# ##...##.#####..##
-# ##...#...#.#####.
-# ..#.....#...###..
-# ..#.#.....#....##'''.split('\n')
-#     asteroid_locations = parse_map(test_map)
-#     vaporization_order = get_vaporization_order((8, 3), asteroid_locations)
-
 
     asteroid_locations = read_map('./inputs/day10.txt')
     best_loc, max_n = get_best_location(asteroid_locations)
