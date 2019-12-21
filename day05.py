@@ -235,7 +235,45 @@ class IntcodeComputer(object):
 
         return None
 
+    def run_until_input_required(self, input_value: int=None) -> List[int]:
+        """
+        Run the program until it requires input at which time it will return the output and halt execution.
+        Program state and instruction pointer is maintained between calls. When opcode 99 is reached (program is terminated)
+        this method will return None.
+        """
 
+        op_function, takes_input, gives_output, parameters = self.parse_instruction()
+        input_used = False
+        outputs = []
+
+        while op_function is not None:
+
+            if takes_input and not gives_output:
+                if not input_used and input_value is not None:
+                    op_function(input_value, *parameters)
+                    input_used = True
+                else:
+                    return outputs
+
+            elif not takes_input and gives_output:
+                outputs.append(op_function(*parameters))
+
+            elif takes_input and gives_output:
+                if not input_used and input_value is not None:
+                    outputs.append(op_function(input_value, *parameters))
+                    input_used = True
+                else:
+                    return outputs
+                    
+            else:
+                op_function(*parameters)
+
+            op_function, takes_input, gives_output, parameters = self.parse_instruction()
+
+        if len(outputs) == 0:
+            return None
+        else: 
+            return outputs
 
 
 if __name__ == '__main__':
