@@ -1,9 +1,10 @@
 from typing import List, Tuple
 from time import time
+from math import gcd
 
 
 class Moon(object):
-    def __init__(self, x, y, z, v_x=0, v_y=0, v_z=0):
+    def __init__(self, x, y, z, v_x=0, v_y=0, v_z=0) -> None:
         self.x = x
         self.y = y
         self.z = z
@@ -11,22 +12,22 @@ class Moon(object):
         self.v_y = v_y
         self.v_z = v_z
 
-    def __repr__(self):
-        return f'Moon(x={self.x}, y={self.y}, z={self.z}, v_x={self.v_x}, v_y={self.v_y}, v_z={self.v_z})'
+    # def __repr__(self) -> str:
+    #     return f'Moon(x={self.x}, y={self.y}, z={self.z}, v_x={self.v_x}, v_y={self.v_y}, v_z={self.v_z})'
 
-    def potential_energy(self):
+    def potential_energy(self) -> int:
         return (abs(self.x) + abs(self.y) + abs(self.z))
     
-    def kinetic_energy(self):
+    def kinetic_energy(self) -> int:
         return (abs(self.v_x) + abs(self.v_y) + abs(self.v_z))
 
-    def energy(self):
+    def energy(self) -> int:
         return (
             self.potential_energy() * self.kinetic_energy()
         )
     
-    def vector(self):
-        return [self.x, self.y, self.z, self.v_x, self.v_y, self.v_z]
+    def vector(self) -> Tuple[int]:
+        return (self.x, self.y, self.z, self.v_x, self.v_y, self.v_z)
 
 
 def read_positions(filename: str) -> List[Moon]:
@@ -78,12 +79,62 @@ def simulate_motion(moons: List[Moon], time_steps: int) -> None:
     return None
 
 
-def get_moon_vectors(moons: List[Moon]) -> Tuple[int]:
+def get_state_on_dim(moons: List[Moon], dim: str) -> List[int]:
 
-    moon_vectors = []
-    for moon in moons:
-        moon_vectors.extend(moon.vector())
-    return tuple(moon_vectors)
+    dim_state = []
+    for m in moons:
+        dim_state.extend([getattr(m, dim), getattr(m, 'v_'+dim)])    
+    dim_state = tuple(dim_state)
+
+    return dim_state
+
+
+def lcm(val1: int, val2: int) -> int:
+    return int(abs(val1 * val2) / gcd(val1, val2))
+
+
+def find_steps_to_repeat(moons: List[Moon]) -> int:
+
+    t = 0
+
+    # A dictionary storing states for each moon and the times when the moon was in that state
+    seen_states = {dim: {get_state_on_dim(moons, dim): [t]} for dim in 'xyz'}
+    any_repeats = {dim: False for dim in 'xyz'}
+
+    while True:
+        simulate_motion(moons, 1)
+        
+        t += 1
+
+        for dim in 'xyz':
+            if any_repeats[dim]:
+                continue
+            
+            state_on_dim = get_state_on_dim(moons, dim)
+
+            if state_on_dim in seen_states[dim]:
+                seen_states[dim][state_on_dim].append(t)
+                any_repeats[dim] = True
+            else:
+                seen_states[dim][state_on_dim] = [t]
+
+        if all(any_repeats[k] for k in any_repeats):
+            break
+
+    repeat_periods = []
+    for dim in 'xyz':
+        for state in seen_states[dim]:
+            if len(seen_states[dim][state]) > 1:
+                repeat_periods.append(
+                    seen_states[dim][state][1] - seen_states[dim][state][0]
+                )
+    
+    repeat_period = lcm(
+        repeat_periods[0], 
+        lcm(repeat_periods[1], repeat_periods[2])
+    )
+
+    return repeat_period
 
 
 if __name__ == '__main__':
@@ -91,6 +142,8 @@ if __name__ == '__main__':
     # Test
     test_moon = Moon(8, -12, -9, -7, 3, 0)
     assert test_moon.energy() == 290
+
+    assert lcm(18, 28) == 252
 
     # Test 
     test_positions = '''<x=-1, y=0, z=2>
@@ -107,27 +160,9 @@ if __name__ == '__main__':
     ) == (5, -6, -1, 0, -3, 0)
 
     # Test
-    test_positions = '''<x=-1, y=0, z=2>
-<x=2, y=-10, z=-7>
-<x=4, y=-8, z=8>
-<x=3, y=5, z=-1>'''
     test_moons = parse_positions(test_positions)
     
-    seen_states = {
-        get_moon_vectors(test_moons): 1
-    }
-
-    t = 0
-    while True:
-        simulate_motion(test_moons, 1)
-        pv = get_moon_vectors(test_moons)
-        t += 1
-        if pv in seen_states:
-            break
-        else: 
-            seen_states[pv] = 1
-        
-    print(t)
+    assert find_steps_to_repeat(test_moons) == 2772
 
     # Test
     test_positions = '''<x=-8, y=-10, z=0>
@@ -136,30 +171,15 @@ if __name__ == '__main__':
 <x=9, y=-8, z=-3>'''
     test_moons = parse_positions(test_positions)
 
-    seen_states = {
-        get_moon_vectors(test_moons): 1
-    }
-
-    t = 0
-    timer = time()
-    while True:
-        simulate_motion(test_moons, 1)
-        pv = get_moon_vectors(test_moons)
-        t += 1
-        if pv in seen_states:
-            break
-        else: 
-            seen_states[pv] = 1
-        if (t % 10000) == 0:
-            print(t, end=' ')
-            print(time() - timer)
-
-    print(t)
-
     # Test
     simulate_motion(test_moons, 100)
     total_energy = sum(moon.energy() for moon in test_moons)
     assert total_energy == 1940
+
+    # Test
+    test_moons = parse_positions(test_positions)
+    test_period = find_steps_to_repeat(test_moons)
+    assert test_period == 4686774924
 
     # Part 1
     moons = read_positions('./inputs/day12.txt')
@@ -167,4 +187,7 @@ if __name__ == '__main__':
     total_energy = sum(moon.energy() for moon in moons)
     print(f"Total energy after 1000 time steps: {total_energy}")
 
-
+    # Part 2
+    moons = read_positions('./inputs/day12.txt')
+    repeat_period = find_steps_to_repeat(moons)
+    print(f'Steps required to find a repeated state: {repeat_period}')
