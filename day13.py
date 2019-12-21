@@ -2,6 +2,7 @@ from typing import List, Tuple, Any
 from day05 import IntcodeComputer, read_program
 import curses
 import time
+import sys
 
 
 class ArcadeCabinet(object):
@@ -86,11 +87,11 @@ class ArcadeCabinet(object):
                 self.render_screen(tiles)
     
 
-def main(screen: Any):
+def main(screen: Any, bot_player: bool):
 
     program = read_program('./inputs/day13.txt')
     cabinet = ArcadeCabinet(screen, program)
-    cabinet.game_loop(bot_player=True)
+    cabinet.game_loop(bot_player=bot_player)
 
 
 if __name__ == '__main__':
@@ -100,5 +101,10 @@ if __name__ == '__main__':
     output = computer.run()
     print(f"Number of block tiles: {sum([1 for i in range(2, len(output), 3) if output[i] == 2])}")
 
-    curses.wrapper(main)
+    if len(sys.argv) > 1:
+        bot_player = int(sys.argv[1]) == 1
+    else:
+        bot_player = False
+
+    curses.wrapper(main, bot_player)
     
