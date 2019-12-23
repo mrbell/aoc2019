@@ -198,6 +198,13 @@ def main_rendered(screen: Any, program: List[int]) -> None:
     screen.getch()
 
 
+def run():
+    program = read_program('./inputs/day15.txt')
+
+    # if display_solution:
+    curses.wrapper(main_rendered, program)
+
+
 if __name__ == '__main__':
 
     assert destination_coordinate((0, 0), NORTH) == (0, 1)
@@ -215,10 +222,10 @@ if __name__ == '__main__':
     # if len(sys.argv) > 1:
     #     if sys.argv[1] == '1':
     #         display_solution = True
-    
-    program = read_program('./inputs/day15.txt')
+    run()
+    # program = read_program('./inputs/day15.txt')
 
-    # if display_solution:
-    curses.wrapper(main_rendered, program)
+    # # if display_solution:
+    # curses.wrapper(main_rendered, program)
         
 

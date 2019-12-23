@@ -134,6 +134,10 @@ def main_rendered(screen: Any, filename: str) -> None:
     screen.getch()
 
 
+def run():
+    curses.wrapper(main_rendered, 'day15_maze_map.json')
+
+
 if __name__ == '__main__':
 
-    curses.wrapper(main_rendered, 'day15_maze_map.json')        
+    run()
